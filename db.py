@@ -29,6 +29,8 @@ OCCUPANCY_STATUSES = ["Owner Occupied", "Rented", "Vacant"]
 VEHICLE_TYPES = ["Car", "Bike", "Scooter", "EV Car", "EV Bike", "Other"]
 ISSUE_CATEGORIES = ["Maintenance", "Plumbing", "Electrical", "Security", "Housekeeping", "Parking", "Other"]
 ISSUE_STATUSES = ["OPEN", "WORKING", "PENDING", "CLOSED"]
+PET_TYPES = ["Dog", "Cat", "Bird", "Fish", "Rabbit", "Other"]
+PET_REGISTRATION_STATUSES = ["REGISTERED", "PENDING", "INACTIVE"]
 
 FLAT_RE = re.compile(r"^([B-G])-?(\d{1,2})(0[1-8])$")
 DB_PATH = Path(__file__).parent / "society.db"
@@ -73,6 +75,22 @@ _SCHEMA = [
         status          TEXT NOT NULL DEFAULT 'OPEN',
         created_at      {ts},
         updated_at      {ts}
+    )""",
+    """CREATE TABLE IF NOT EXISTS pet_registrations (
+        id                  {pk},
+        flat_no             TEXT NOT NULL,
+        owner_name          TEXT NOT NULL,
+        mobile              TEXT,
+        pet_name            TEXT NOT NULL,
+        pet_type            TEXT NOT NULL,
+        breed               TEXT,
+        vaccination_details TEXT,
+        license_required    TEXT NOT NULL DEFAULT 'No',
+        license_no          TEXT,
+        license_details     TEXT,
+        status              TEXT NOT NULL DEFAULT 'REGISTERED',
+        created_at          {ts},
+        updated_at          {ts}
     )""",
 ]
 
@@ -221,6 +239,8 @@ def get_metrics():
         rented = count(f"SELECT COUNT(*) AS n FROM residents WHERE status={p}", ("Rented",))
         vehicles = count("SELECT COUNT(*) AS n FROM vehicles")
         open_issues = count(f"SELECT COUNT(*) AS n FROM owner_issues WHERE status <> {p}", ("CLOSED",))
+        pets = count("SELECT COUNT(*) AS n FROM pet_registrations")
+        pending_pets = count(f"SELECT COUNT(*) AS n FROM pet_registrations WHERE status = {p}", ("PENDING",))
     return {
         "total_flats": TOTAL_FLATS,
         "occupied": owner + rented,
@@ -229,6 +249,8 @@ def get_metrics():
         "vacant": TOTAL_FLATS - owner - rented,
         "vehicles": vehicles,
         "open_issues": open_issues,
+        "pets": pets,
+        "pending_pets": pending_pets,
     }
 
 
@@ -419,6 +441,98 @@ def update_owner_issue_status(issue_id, status):
 def delete_owner_issue(issue_id):
     with db_cursor() as (cur, backend):
         cur.execute(f"DELETE FROM owner_issues WHERE id={_ph(backend)}", (issue_id,))
+
+
+# ---------- pet registrations ----------
+def add_pet_registration(flat_no, owner_name, mobile, pet_name, pet_type, breed,
+                         vaccination_details, license_required, license_no,
+                         license_details):
+    if pet_type not in PET_TYPES:
+        pet_type = "Other"
+    license_required = "Yes" if str(license_required).strip().lower() == "yes" else "No"
+    license_no = str(license_no or "").strip()
+    status = "PENDING" if license_required == "Yes" and not license_no else "REGISTERED"
+
+    with db_cursor() as (cur, backend):
+        p = _ph(backend)
+        now = "CURRENT_TIMESTAMP" if backend == "postgres" else "datetime('now')"
+        cur.execute(
+            f"""INSERT INTO pet_registrations
+                (flat_no, owner_name, mobile, pet_name, pet_type, breed,
+                 vaccination_details, license_required, license_no,
+                 license_details, status, created_at, updated_at)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{now},{now})""",
+            (
+                flat_no,
+                owner_name,
+                mobile,
+                pet_name,
+                pet_type,
+                breed,
+                vaccination_details,
+                license_required,
+                license_no,
+                license_details,
+                status,
+            ),
+        )
+
+
+def search_pet_registrations(term="", status="All", flat_no=""):
+    like = f"%{term.strip()}%"
+    with db_cursor(commit=False) as (cur, backend):
+        p, op = _ph(backend), ("ILIKE" if backend == "postgres" else "LIKE")
+        nocase = "" if backend == "postgres" else " COLLATE NOCASE"
+        sql = f"""SELECT * FROM pet_registrations
+                  WHERE (flat_no {op} {p}
+                         OR owner_name {op} {p}{nocase}
+                         OR mobile {op} {p}
+                         OR pet_name {op} {p}{nocase}
+                         OR pet_type {op} {p}{nocase}
+                         OR breed {op} {p}{nocase}
+                         OR vaccination_details {op} {p}{nocase}
+                         OR license_no {op} {p}{nocase}
+                         OR license_details {op} {p}{nocase})"""
+        params = [like, like, like, like, like, like, like, like, like]
+
+        if status and status != "All":
+            sql += f" AND status={p}"
+            params.append(status)
+        if flat_no:
+            sql += f" AND flat_no={p}"
+            params.append(flat_no)
+
+        sql += " ORDER BY updated_at DESC, created_at DESC"
+        cur.execute(sql, tuple(params))
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_pet_status_counts():
+    with db_cursor(commit=False) as (cur, backend):
+        cur.execute("SELECT status, COUNT(*) AS n FROM pet_registrations GROUP BY status")
+        counts = {status: 0 for status in PET_REGISTRATION_STATUSES}
+        for row in cur.fetchall():
+            status = row["status"] if backend == "postgres" else row[0]
+            count = row["n"] if backend == "postgres" else row[1]
+            counts[status] = count
+        return counts
+
+
+def update_pet_registration_status(pet_id, status):
+    if status not in PET_REGISTRATION_STATUSES:
+        raise ValueError("Invalid pet registration status.")
+    with db_cursor() as (cur, backend):
+        p = _ph(backend)
+        now = "CURRENT_TIMESTAMP" if backend == "postgres" else "datetime('now')"
+        cur.execute(
+            f"UPDATE pet_registrations SET status={p}, updated_at={now} WHERE id={p}",
+            (status, pet_id),
+        )
+
+
+def delete_pet_registration(pet_id):
+    with db_cursor() as (cur, backend):
+        cur.execute(f"DELETE FROM pet_registrations WHERE id={_ph(backend)}", (pet_id,))
 
 
 def bulk_add_vehicles(df):

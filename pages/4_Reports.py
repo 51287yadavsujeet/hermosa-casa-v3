@@ -1,7 +1,8 @@
 import pandas as pd
 import streamlit as st
-import db
+
 import auth
+import db
 
 st.set_page_config(page_title="Reports | Hermosa Casa", page_icon="📋", layout="wide")
 auth.require_login()
@@ -13,18 +14,20 @@ st.title("📋 Reports")
 residents = db.search_residents("")
 vehicles = db.search_vehicles("")
 issues = db.search_owner_issues("")
+pets = db.search_pet_registrations("")
 
-if not residents and not vehicles and not issues:
-    st.info("No data yet. Reports will populate once residents, vehicles, or complaints are added.")
+if not residents and not vehicles and not issues and not pets:
+    st.info("No data yet. Reports will populate once residents, vehicles, complaints, or pets are added.")
     st.stop()
 
 m = db.get_metrics()
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 c1.metric("Occupied", m["occupied"])
 c2.metric("Owner Occupied", m["owner_occupied"])
 c3.metric("Rented", m["rented"])
 c4.metric("Occupancy %", f"{m['occupied'] / m['total_flats'] * 100:.1f}%")
 c5.metric("Open Complaints", m["open_issues"])
+c6.metric("Registered Pets", m["pets"])
 
 if residents:
     rdf = pd.DataFrame(residents)
@@ -49,15 +52,46 @@ if issues:
     st.subheader("Complaints by Category")
     st.bar_chart(idf["issue_category"].fillna("Other").value_counts())
 
+if pets:
+    pdf = pd.DataFrame(pets)
+    st.subheader("Pets by Type")
+    st.bar_chart(pdf["pet_type"].value_counts())
+
+    st.subheader("Pet Registrations by Status")
+    st.bar_chart(pdf["status"].value_counts())
+
 st.divider()
 st.subheader("⬇️ Exports")
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 if residents:
-    col1.download_button("Residents CSV", pd.DataFrame(residents).to_csv(index=False).encode(),
-                         "residents_report.csv", "text/csv", use_container_width=True)
+    col1.download_button(
+        "Residents CSV",
+        pd.DataFrame(residents).to_csv(index=False).encode(),
+        "residents_report.csv",
+        "text/csv",
+        use_container_width=True,
+    )
 if vehicles:
-    col2.download_button("Vehicles CSV", pd.DataFrame(vehicles).to_csv(index=False).encode(),
-                         "vehicles_report.csv", "text/csv", use_container_width=True)
+    col2.download_button(
+        "Vehicles CSV",
+        pd.DataFrame(vehicles).to_csv(index=False).encode(),
+        "vehicles_report.csv",
+        "text/csv",
+        use_container_width=True,
+    )
 if issues:
-    col3.download_button("Complaints CSV", pd.DataFrame(issues).to_csv(index=False).encode(),
-                         "owner_issues_report.csv", "text/csv", use_container_width=True)
+    col3.download_button(
+        "Complaints CSV",
+        pd.DataFrame(issues).to_csv(index=False).encode(),
+        "owner_issues_report.csv",
+        "text/csv",
+        use_container_width=True,
+    )
+if pets:
+    col4.download_button(
+        "Pets CSV",
+        pd.DataFrame(pets).to_csv(index=False).encode(),
+        "pet_registrations_report.csv",
+        "text/csv",
+        use_container_width=True,
+    )

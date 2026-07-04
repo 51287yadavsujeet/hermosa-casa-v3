@@ -42,8 +42,9 @@ c4, c5, c6 = st.columns(3)
 c4.metric("👨 Owner Occupied", m["owner_occupied"])
 c5.metric("🏡 Rented", m["rented"])
 c6.metric("🚗 Vehicles", m["vehicles"])
-c7, _, _ = st.columns(3)
+c7, c8, _ = st.columns(3)
 c7.metric("Open Complaints", m["open_issues"])
+c8.metric("Registered Pets", m["pets"])
 
 if m["occupied"] == 0:
     st.info("No resident records yet. Add flats from the **Residents** page and metrics update live.")
@@ -83,5 +84,25 @@ if vq:
     else:
         st.warning("No matching vehicle found.")
 
+# ---------- quick pet search ----------
 st.divider()
-st.caption("Full management tools: sidebar -> Residents, Vehicles, Parking, Reports, Owner Issues, Emergency Contacts.")
+st.subheader("Quick Pet Search")
+pq = st.text_input("Pet / Flat / Owner / Mobile", placeholder="Bruno or E-1204", key="quick_pet")
+if pq:
+    pets = db.search_pet_registrations(pq)
+    if pets:
+        for pet in pets:
+            with st.expander(f"{pet['pet_name']} - Flat {pet['flat_no']} ({pet['status']})"):
+                st.write(
+                    f"**Pet:** {pet['pet_type']}  \n"
+                    f"**Breed:** {pet['breed'] or '-'}  \n"
+                    f"**Owner:** {pet['owner_name']}  \n"
+                    f"**Mobile:** {pet['mobile'] or '-'}  \n"
+                    f"**Licence Required:** {pet['license_required']}  \n"
+                    f"**Licence No:** {pet['license_no'] or '-'}"
+                )
+    else:
+        st.warning("No matching pet record found.")
+
+st.divider()
+st.caption("Full management tools: sidebar -> Residents, Vehicles, Parking, Reports, Owner Issues, Pet Information, Emergency Contacts.")
