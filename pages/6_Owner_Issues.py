@@ -23,7 +23,7 @@ tab_add, tab_view = st.tabs(["Add Complaint", "View / Track"])
 with tab_add:
     with st.form("owner_issue_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
-        flat_raw = col1.text_input("Flat Number *", placeholder="E-1204")
+        flat_raw = col1.text_input("Flat Number *", placeholder="E-1104")
         mobile = col2.text_input("Mobile", placeholder="9876543210")
 
         owner_name = st.text_input("Owner Name *")
@@ -47,7 +47,7 @@ with tab_add:
                 owner = matches[0]["owner_name"]
 
         if not flat_no:
-            st.error("Invalid flat number. Expected format like E-1204.")
+            st.error("Invalid flat number. Expected format like E-1104.")
         elif not owner:
             st.error("Owner name is required.")
         elif not title.strip():

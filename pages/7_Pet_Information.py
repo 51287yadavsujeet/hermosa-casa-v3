@@ -23,7 +23,7 @@ tab_add, tab_view = st.tabs(["Register Pet", "View / Track"])
 with tab_add:
     with st.form("pet_registration_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
-        flat_raw = col1.text_input("Owner Flat Number *", placeholder="E-1204")
+        flat_raw = col1.text_input("Owner Flat Number *", placeholder="E-1104")
         mobile = col2.text_input("Mobile Number", placeholder="9876543210")
 
         owner_name = st.text_input("Owner Name *")

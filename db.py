@@ -10,8 +10,8 @@ from pathlib import Path
 
 import streamlit as st
 
-#WINGS = ["B", "C", "D", "E", "F", "G"]
-WINGS = ["A", "B", "C", "D", "E", "F", "G"]
+WINGS = ["B", "C", "D", "E", "F", "G"]
+#WINGS = ["A", "B", "C", "D", "E", "F", "G"]
 
 # Society format:
 # E-1204, E1204, B-0101, B0101
@@ -683,7 +683,7 @@ def bulk_add_vehicles(df):
 
 # ---------- shared sidebar ----------
 def sidebar_footer():
-    backend = "Supabase" if _supabase_url() else " (local — data resets on redeploy)"
+   # backend = "Supabase" if _supabase_url() else " (local — data resets on redeploy)"
     with st.sidebar:
         st.markdown("### Society Structure")
         st.markdown(
@@ -692,4 +692,5 @@ def sidebar_footer():
             f"- Flats per Floor: {FLATS_PER_FLOOR}\n"
             f"- Total Flats: {TOTAL_FLATS}"
         )
-        st.caption(f"Society Management System | v3.1 | DB: {backend}")
+        #st.caption(f"Society Management System | v3.1 | DB: {backend}")
+        st.caption("Created by Sujeet Yadav | Building the Solutions")

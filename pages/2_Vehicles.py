@@ -26,7 +26,7 @@ with tab_add:
     else:
         with st.form("vehicle_form"):
             vehicle_no = st.text_input("Vehicle Number *", placeholder="MH12AB1234")
-            flat_raw = st.text_input("Flat Number *", placeholder="E-1204")
+            flat_raw = st.text_input("Flat Number *", placeholder="E-1104")
             vtype = st.selectbox("Vehicle Type *", db.VEHICLE_TYPES)
             model = st.text_input("Make / Model", placeholder="Hyundai Creta")
             slot = st.text_input("Parking Slot", placeholder="B-P1-23")

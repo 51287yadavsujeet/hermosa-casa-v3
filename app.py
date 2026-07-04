@@ -88,7 +88,7 @@ if vq:
 # ---------- quick pet search ----------
 st.divider()
 st.subheader("Quick Pet Search")
-pq = st.text_input("Pet / Flat / Owner / Mobile", placeholder="Bruno or E-1204", key="quick_pet")
+pq = st.text_input("Pet / Flat / Owner / Mobile", placeholder="Bruno or E-1104", key="quick_pet")
 if pq:
     pets = db.search_pet_registrations(pq)
     if pets:

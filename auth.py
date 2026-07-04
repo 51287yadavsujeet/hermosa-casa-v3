@@ -54,7 +54,7 @@ def require_login():
                 st.session_state.role = "read"
                 st.rerun()
             else:
-                st.error("❌ Incorrect password. Contact the society secretary.")
+                st.error("❌ Incorrect password. Contact the Admin.")
 
     st.info(
         "🔒 **Two access levels**\n"

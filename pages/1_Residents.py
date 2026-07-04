@@ -22,7 +22,7 @@ with tab_add:
         st.warning("Read-only mode: Single record editing is disabled.")
     else:
         with st.form("resident_form", clear_on_submit=False):
-            flat_raw = st.text_input("Flat Number *", placeholder="E-1204 (Wing B–G, Floor 1–16, Flat 01–08)")
+            flat_raw = st.text_input("Flat Number *", placeholder="E-1104 (Wing B–G, Floor 1–16, Flat 01–08)")
             owner_name = st.text_input("Owner Name *")
             col1, col2 = st.columns(2)
             owner_mobile = col1.text_input("Owner Mobile")
@@ -36,7 +36,7 @@ with tab_add:
         if submitted:
             flat_no = db.normalize_flat(flat_raw)
             if not flat_no:
-                st.error("Invalid flat number. Expected format like **E-1204**: Wing B–G, Floor 1–16, Flat 01–08.")
+                st.error("Invalid flat number. Expected format like **E-1104**: Wing B–G, Floor 1–16, Flat 01–08.")
             elif not owner_name.strip():
                 st.error("Owner name is required.")
             elif status == "Rented" and not tenant_name.strip():
