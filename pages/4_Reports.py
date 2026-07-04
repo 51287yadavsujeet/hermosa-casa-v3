@@ -4,30 +4,33 @@ import streamlit as st
 import auth
 import db
 
-st.set_page_config(page_title="Reports | Hermosa Casa", page_icon="📋", layout="wide")
+st.set_page_config(page_title="Reports | Hermosa Casa", page_icon="R", layout="wide")
 auth.require_login()
 db.init_db()
 db.sidebar_footer()
 
-st.title("📋 Reports")
+st.title("Reports")
 
 residents = db.search_residents("")
 vehicles = db.search_vehicles("")
 issues = db.search_owner_issues("")
 pets = db.search_pet_registrations("")
+bookings = db.search_clubhouse_bookings("")
 
-if not residents and not vehicles and not issues and not pets:
-    st.info("No data yet. Reports will populate once residents, vehicles, complaints, or pets are added.")
+if not residents and not vehicles and not issues and not pets and not bookings:
+    st.info("No data yet. Reports will populate once residents, vehicles, complaints, pets, or clubhouse bookings are added.")
     st.stop()
 
 m = db.get_metrics()
-c1, c2, c3, c4, c5, c6 = st.columns(6)
+c1, c2, c3, c4 = st.columns(4)
 c1.metric("Occupied", m["occupied"])
 c2.metric("Owner Occupied", m["owner_occupied"])
 c3.metric("Rented", m["rented"])
 c4.metric("Occupancy %", f"{m['occupied'] / m['total_flats'] * 100:.1f}%")
+c5, c6, c7 = st.columns(3)
 c5.metric("Open Complaints", m["open_issues"])
 c6.metric("Registered Pets", m["pets"])
+c7.metric("Clubhouse Bookings", m["clubhouse_bookings"])
 
 if residents:
     rdf = pd.DataFrame(residents)
@@ -60,9 +63,17 @@ if pets:
     st.subheader("Pet Registrations by Status")
     st.bar_chart(pdf["status"].value_counts())
 
+if bookings:
+    bdf = pd.DataFrame(bookings)
+    st.subheader("Clubhouse Bookings by Function Type")
+    st.bar_chart(bdf["function_type"].value_counts())
+
+    st.subheader("Clubhouse Bookings by Status")
+    st.bar_chart(bdf["status"].value_counts())
+
 st.divider()
-st.subheader("⬇️ Exports")
-col1, col2, col3, col4 = st.columns(4)
+st.subheader("Exports")
+col1, col2, col3, col4, col5 = st.columns(5)
 if residents:
     col1.download_button(
         "Residents CSV",
@@ -92,6 +103,14 @@ if pets:
         "Pets CSV",
         pd.DataFrame(pets).to_csv(index=False).encode(),
         "pet_registrations_report.csv",
+        "text/csv",
+        use_container_width=True,
+    )
+if bookings:
+    col5.download_button(
+        "Clubhouse CSV",
+        pd.DataFrame(bookings).to_csv(index=False).encode(),
+        "clubhouse_bookings_report.csv",
         "text/csv",
         use_container_width=True,
     )

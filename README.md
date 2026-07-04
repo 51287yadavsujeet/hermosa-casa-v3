@@ -41,7 +41,7 @@ Your existing `society.db` (SQLite) will continue to work locally for testing.
 ## Why this upgrade matters
 - **Data safety**: SQLite on Streamlit Cloud is wiped on every deploy/restart. Supabase keeps your 768-flat data safe.
 - **Security**: No more public access to resident names, mobiles, and vehicle details.
-- **Zero breaking changes**: All your pages (Residents with tenant handling, Vehicles with owner join, Parking, Reports, Owner Issues, Pet Information, Emergency) work exactly as before.
+- **Zero breaking changes**: All your pages (Residents with tenant handling, Vehicles with owner join, Parking, Reports, Owner Issues, Pet Information, Clubhouse Booking, Emergency) work exactly as before.
 
 ## Production Best Practices (Recommended)
 

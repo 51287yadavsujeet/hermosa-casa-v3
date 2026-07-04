@@ -31,6 +31,8 @@ ISSUE_CATEGORIES = ["Maintenance", "Plumbing", "Electrical", "Security", "Housek
 ISSUE_STATUSES = ["OPEN", "WORKING", "PENDING", "CLOSED"]
 PET_TYPES = ["Dog", "Cat", "Bird", "Fish", "Rabbit", "Other"]
 PET_REGISTRATION_STATUSES = ["REGISTERED", "PENDING", "INACTIVE"]
+FUNCTION_TYPES = ["Birthday", "Anniversary", "Meeting", "Festival", "Religious Function", "Family Function", "Other"]
+BOOKING_STATUSES = ["BOOKED", "PENDING", "CANCELLED"]
 
 FLAT_RE = re.compile(r"^([B-G])-?(\d{1,2})(0[1-8])$")
 DB_PATH = Path(__file__).parent / "society.db"
@@ -91,6 +93,20 @@ _SCHEMA = [
         status              TEXT NOT NULL DEFAULT 'REGISTERED',
         created_at          {ts},
         updated_at          {ts}
+    )""",
+    """CREATE TABLE IF NOT EXISTS clubhouse_bookings (
+        id                   {pk},
+        booking_date         TEXT NOT NULL,
+        function_type        TEXT NOT NULL,
+        owner_flat_no        TEXT NOT NULL,
+        owner_name           TEXT NOT NULL,
+        owner_contact        TEXT,
+        owner_mobile         TEXT,
+        booked_for_whole_day TEXT NOT NULL DEFAULT 'Yes',
+        notes                TEXT,
+        status               TEXT NOT NULL DEFAULT 'BOOKED',
+        created_at           {ts},
+        updated_at           {ts}
     )""",
 ]
 
@@ -241,6 +257,7 @@ def get_metrics():
         open_issues = count(f"SELECT COUNT(*) AS n FROM owner_issues WHERE status <> {p}", ("CLOSED",))
         pets = count("SELECT COUNT(*) AS n FROM pet_registrations")
         pending_pets = count(f"SELECT COUNT(*) AS n FROM pet_registrations WHERE status = {p}", ("PENDING",))
+        clubhouse_bookings = count(f"SELECT COUNT(*) AS n FROM clubhouse_bookings WHERE status <> {p}", ("CANCELLED",))
     return {
         "total_flats": TOTAL_FLATS,
         "occupied": owner + rented,
@@ -251,6 +268,7 @@ def get_metrics():
         "open_issues": open_issues,
         "pets": pets,
         "pending_pets": pending_pets,
+        "clubhouse_bookings": clubhouse_bookings,
     }
 
 
@@ -533,6 +551,93 @@ def update_pet_registration_status(pet_id, status):
 def delete_pet_registration(pet_id):
     with db_cursor() as (cur, backend):
         cur.execute(f"DELETE FROM pet_registrations WHERE id={_ph(backend)}", (pet_id,))
+
+
+# ---------- clubhouse bookings ----------
+def add_clubhouse_booking(booking_date, function_type, owner_flat_no, owner_name,
+                          owner_contact, owner_mobile, booked_for_whole_day,
+                          notes):
+    if function_type not in FUNCTION_TYPES:
+        function_type = "Other"
+    booked_for_whole_day = "Yes" if str(booked_for_whole_day).strip().lower() == "yes" else "No"
+
+    with db_cursor() as (cur, backend):
+        p = _ph(backend)
+        now = "CURRENT_TIMESTAMP" if backend == "postgres" else "datetime('now')"
+        cur.execute(
+            f"""INSERT INTO clubhouse_bookings
+                (booking_date, function_type, owner_flat_no, owner_name,
+                 owner_contact, owner_mobile, booked_for_whole_day,
+                 notes, status, created_at, updated_at)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{now},{now})""",
+            (
+                booking_date,
+                function_type,
+                owner_flat_no,
+                owner_name,
+                owner_contact,
+                owner_mobile,
+                booked_for_whole_day,
+                notes,
+                "BOOKED",
+            ),
+        )
+
+
+def search_clubhouse_bookings(term="", status="All", owner_flat_no=""):
+    like = f"%{term.strip()}%"
+    with db_cursor(commit=False) as (cur, backend):
+        p, op = _ph(backend), ("ILIKE" if backend == "postgres" else "LIKE")
+        nocase = "" if backend == "postgres" else " COLLATE NOCASE"
+        sql = f"""SELECT * FROM clubhouse_bookings
+                  WHERE (booking_date {op} {p}
+                         OR function_type {op} {p}{nocase}
+                         OR owner_flat_no {op} {p}
+                         OR owner_name {op} {p}{nocase}
+                         OR owner_contact {op} {p}{nocase}
+                         OR owner_mobile {op} {p}
+                         OR booked_for_whole_day {op} {p}{nocase}
+                         OR notes {op} {p}{nocase})"""
+        params = [like, like, like, like, like, like, like, like]
+
+        if status and status != "All":
+            sql += f" AND status={p}"
+            params.append(status)
+        if owner_flat_no:
+            sql += f" AND owner_flat_no={p}"
+            params.append(owner_flat_no)
+
+        sql += " ORDER BY booking_date DESC, updated_at DESC"
+        cur.execute(sql, tuple(params))
+        return [dict(r) for r in cur.fetchall()]
+
+
+def get_clubhouse_booking_status_counts():
+    with db_cursor(commit=False) as (cur, backend):
+        cur.execute("SELECT status, COUNT(*) AS n FROM clubhouse_bookings GROUP BY status")
+        counts = {status: 0 for status in BOOKING_STATUSES}
+        for row in cur.fetchall():
+            status = row["status"] if backend == "postgres" else row[0]
+            count = row["n"] if backend == "postgres" else row[1]
+            counts[status] = count
+        return counts
+
+
+def update_clubhouse_booking_status(booking_id, status):
+    if status not in BOOKING_STATUSES:
+        raise ValueError("Invalid clubhouse booking status.")
+    with db_cursor() as (cur, backend):
+        p = _ph(backend)
+        now = "CURRENT_TIMESTAMP" if backend == "postgres" else "datetime('now')"
+        cur.execute(
+            f"UPDATE clubhouse_bookings SET status={p}, updated_at={now} WHERE id={p}",
+            (status, booking_id),
+        )
+
+
+def delete_clubhouse_booking(booking_id):
+    with db_cursor() as (cur, backend):
+        cur.execute(f"DELETE FROM clubhouse_bookings WHERE id={_ph(backend)}", (booking_id,))
 
 
 def bulk_add_vehicles(df):

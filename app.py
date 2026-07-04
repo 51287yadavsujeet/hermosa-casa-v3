@@ -42,9 +42,10 @@ c4, c5, c6 = st.columns(3)
 c4.metric("👨 Owner Occupied", m["owner_occupied"])
 c5.metric("🏡 Rented", m["rented"])
 c6.metric("🚗 Vehicles", m["vehicles"])
-c7, c8, _ = st.columns(3)
+c7, c8, c9 = st.columns(3)
 c7.metric("Open Complaints", m["open_issues"])
 c8.metric("Registered Pets", m["pets"])
+c9.metric("Clubhouse Bookings", m["clubhouse_bookings"])
 
 if m["occupied"] == 0:
     st.info("No resident records yet. Add flats from the **Residents** page and metrics update live.")
@@ -104,5 +105,27 @@ if pq:
     else:
         st.warning("No matching pet record found.")
 
+# ---------- quick clubhouse booking search ----------
 st.divider()
-st.caption("Full management tools: sidebar -> Residents, Vehicles, Parking, Reports, Owner Issues, Pet Information, Emergency Contacts.")
+st.subheader("Quick Clubhouse Booking Search")
+bq = st.text_input("Date / Function / Flat / Owner / Mobile", placeholder="Birthday or E-1204", key="quick_booking")
+if bq:
+    bookings = db.search_clubhouse_bookings(bq)
+    if bookings:
+        for booking in bookings:
+            with st.expander(
+                f"{booking['booking_date']} - {booking['function_type']} "
+                f"({booking['status']})"
+            ):
+                st.write(
+                    f"**Flat:** {booking['owner_flat_no']}  \n"
+                    f"**Owner:** {booking['owner_name']}  \n"
+                    f"**Owner Mobile:** {booking['owner_mobile'] or '-'}  \n"
+                    f"**Owner Contact:** {booking['owner_contact'] or '-'}  \n"
+                    f"**Whole Day:** {booking['booked_for_whole_day']}"
+                )
+    else:
+        st.warning("No matching clubhouse booking found.")
+
+st.divider()
+st.caption("Full management tools: sidebar -> Residents, Vehicles, Parking, Reports, Owner Issues, Pet Information, Clubhouse Booking, Emergency Contacts.")
